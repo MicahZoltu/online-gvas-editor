@@ -6,7 +6,7 @@ server.on('request', async (request, response) => {
 	try {
 		// request.url is technically possible to be undefined, but requires a buggy/broken client connecting
 		const urlPath = (request.url.endsWith('/')) ? `${ request.url }index.html` : request.url
-		const filePath = decodeURI(`.${ urlPath }`)
+		const filePath = decodeURI(`./app${ urlPath }`)
 		// NOT SECURE!  Will happily read `../../../../private-file.txt`
 		const fileContents = await filesystem.readFile(filePath)
 		const extension = filePath.split('.').pop()
