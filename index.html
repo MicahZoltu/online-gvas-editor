@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>GVAS Editor</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+			margin: 0;
+			padding: 20px;
+			background-color: #1a1a2e;
+			color: #eee;
+			min-height: 100vh;
+		}
+
+		.container {
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+			height: calc(100vh - 40px);
+		}
+
+		h1 {
+			margin: 0 0 20px 0;
+			color: #00d9ff;
+		}
+
+		.toolbar {
+			display: flex;
+			gap: 10px;
+			margin-bottom: 20px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.btn {
+			padding: 10px 20px;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 500;
+			transition: background-color 0.2s;
+		}
+
+		.btn-primary {
+			background-color: #00d9ff;
+			color: #1a1a2e;
+		}
+
+		.btn-primary:hover {
+			background-color: #00b8d9;
+		}
+
+		.btn-secondary {
+			background-color: #444;
+			color: #eee;
+		}
+
+		.btn-secondary:hover {
+			background-color: #555;
+		}
+
+		.btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		input[type="file"] {
+			display: none;
+		}
+
+		.file-input-label {
+			padding: 10px 20px;
+			background-color: #444;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background-color 0.2s;
+		}
+
+		.file-input-label:hover {
+			background-color: #555;
+		}
+
+		.status-bar {
+			background-color: #2a2a4a;
+			padding: 10px 15px;
+			border-radius: 5px;
+			margin-bottom: 20px;
+			font-size: 14px;
+		}
+
+		.status-bar .filename {
+			color: #00d9ff;
+		}
+
+		.editor-container {
+			display: flex;
+			gap: 20px;
+			min-height: 400px;
+			flex-grow: 1;
+			flex-shrink: 1;
+		}
+
+		.sidebar {
+			background-color: #2a2a4a;
+			border-radius: 8px;
+			padding: 15px;
+			overflow-y: auto;
+			flex: 1 1 300px;
+		}
+
+		.sidebar h3 {
+			margin: 0 0 15px 0;
+			font-size: 14px;
+			color: #888;
+			text-transform: uppercase;
+		}
+
+		.property-tree {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+		}
+
+		.property-tree li {
+			padding: 5px 0;
+		}
+
+		.property-item {
+			display: flex;
+			align-items: center;
+			padding: 6px 8px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 13px;
+			transition: background-color 0.15s;
+			gap: 5px;
+		}
+
+		.property-item:hover {
+			background-color: #3a3a5a;
+		}
+
+		.property-item.selected {
+			background-color: #00d9ff;
+			color: #1a1a2e;
+		}
+
+		.property-item .indent {
+			display: inline-block;
+			width: 16px;
+		}
+
+		.property-item .type-icon {
+			width: 16px;
+			height: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 10px;
+			background-color: #444;
+			border-radius: 3px;
+		}
+
+		.property-item .name {
+			flex: 1;
+		}
+
+		.property-item .value-preview {
+			color: #888;
+			font-size: 11px;
+		}
+
+		.property-item.selected .value-preview {
+			color: #1a1a2e;
+		}
+
+		.main-panel {
+			background-color: #2a2a4a;
+			border-radius: 8px;
+			padding: 20px;
+			overflow-y: auto;
+			flex: 1 1 300px;
+		}
+
+		.property-detail {
+			display: none;
+		}
+
+		.property-detail.active {
+			display: block;
+		}
+
+		.property-header {
+			border-bottom: 1px solid #444;
+			padding-bottom: 15px;
+			margin-bottom: 20px;
+		}
+
+		.property-header h2 {
+			margin: 0 0 5px 0;
+			font-size: 18px;
+		}
+
+		.property-header .meta {
+			color: #888;
+			font-size: 12px;
+		}
+
+		.property-field {
+			margin-bottom: 15px;
+		}
+
+		.property-field label {
+			display: block;
+			margin-bottom: 5px;
+			font-size: 12px;
+			color: #888;
+		}
+
+		.property-field input[type="text"],
+		.property-field input[type="number"],
+		.property-field textarea,
+		.property-field select {
+			width: 100%;
+			padding: 8px 12px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #1a1a2e;
+			color: #eee;
+			font-size: 14px;
+		}
+
+		.property-field input:focus,
+		.property-field textarea:focus,
+		.property-field select:focus {
+			outline: none;
+			border-color: #00d9ff;
+		}
+
+		.property-field textarea {
+			min-height: 100px;
+			resize: vertical;
+			font-family: 'Consolas', 'Monaco', monospace;
+		}
+
+		.array-editor {
+			border: 1px solid #444;
+			border-radius: 4px;
+			margin-top: 10px;
+		}
+
+		.array-header {
+			background-color: #3a3a5a;
+			padding: 10px 15px;
+			border-radius: 4px 4px 0 0;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.array-header .count {
+			font-size: 12px;
+			color: #888;
+		}
+
+		.array-items {
+			padding: 10px;
+		}
+
+		.array-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 8px;
+			background-color: #1a1a2e;
+			border-radius: 4px;
+			margin-bottom: 5px;
+		}
+
+		.array-item:last-child {
+			margin-bottom: 0;
+		}
+
+		.array-item input {
+			flex: 1;
+			padding: 6px 10px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #2a2a4a;
+			color: #eee;
+			font-size: 13px;
+		}
+
+		.array-actions {
+			display: flex;
+			gap: 5px;
+		}
+
+		.array-actions .btn {
+			padding: 5px 10px;
+			font-size: 12px;
+		}
+
+		.struct-editor {
+			border: 1px solid #444;
+			border-radius: 4px;
+			padding: 15px;
+			margin-top: 10px;
+		}
+
+		.struct-field {
+			margin-bottom: 15px;
+		}
+
+		.struct-field:last-child {
+			margin-bottom: 0;
+		}
+
+		.map-editor {
+			border: 1px solid #444;
+			border-radius: 4px;
+			margin-top: 10px;
+		}
+
+		.map-header {
+			background-color: #3a3a5a;
+			padding: 10px 15px;
+			border-radius: 4px 4px 0 0;
+		}
+
+		.map-items {
+			padding: 10px;
+		}
+
+		.map-item {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 10px;
+			padding: 10px;
+			background-color: #1a1a2e;
+			border-radius: 4px;
+			margin-bottom: 5px;
+		}
+
+		.map-item:last-child {
+			margin-bottom: 0;
+		}
+
+		.map-item .key-wrapper,
+		.map-item .value-wrapper {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.map-item .key-label,
+		.map-item .value-label {
+			font-size: 11px;
+			color: #888;
+			margin-bottom: 3px;
+		}
+
+		.empty-state {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			height: 100%;
+			color: #666;
+			text-align: center;
+		}
+
+		.empty-state .icon {
+			font-size: 48px;
+			margin-bottom: 15px;
+			opacity: 0.5;
+		}
+
+		.empty-state p {
+			margin: 0;
+			font-size: 14px;
+		}
+
+		.header-info {
+			background-color: #2a2a4a;
+			border-radius: 8px;
+			padding: 15px;
+			margin-bottom: 20px;
+		}
+
+		.header-info h3 {
+			margin: 0 0 10px 0;
+			font-size: 14px;
+			color: #00d9ff;
+		}
+
+		.header-info .info-grid {
+			display: grid;
+		}
+
+		.header-info .info-item {
+			display: flex;
+			justify-content: space-between;
+			border-bottom: 1px solid #3a3a5a;
+		}
+
+		.header-info .info-item:last-child {
+			border-bottom: none;
+		}
+
+		.header-info .info-label {
+			color: #888;
+			font-size: 12px;
+		}
+
+		.header-info .info-value {
+			font-size: 12px;
+			font-family: 'Consolas', 'Monaco', monospace;
+		}
+
+		.modified-indicator {
+			display: inline-block;
+			width: 8px;
+			height: 8px;
+			background-color: #ffd700;
+			border-radius: 50%;
+			margin-left: 10px;
+		}
+
+		.modified-indicator.hidden {
+			display: none;
+		}
+
+		/* Tree-specific styles */
+		.property-tree {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+		}
+
+		.property-tree li {
+			list-style: none;
+			position: relative;
+		}
+
+		.tree-children {
+			list-style: none;
+			margin: 0;
+			padding-left: 16px;
+			display: none;
+		}
+
+		.tree-children.expanded {
+			display: block;
+		}
+
+		.property-item {
+			display: flex;
+			align-items: center;
+			padding: 4px 8px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 13px;
+			gap: 6px;
+			transition: background-color 0.15s;
+		}
+
+		.property-item:hover {
+			background-color: #3a3a5a;
+		}
+
+		.property-item.selected {
+			background-color: #00d9ff;
+			color: #1a1a2e;
+		}
+
+		.expand-toggle {
+			width: 16px;
+			height: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			font-size: 10px;
+			color: #888;
+			transition: transform 0.15s;
+			flex-shrink: 0;
+		}
+
+		.expand-toggle.expanded {
+			transform: rotate(90deg);
+		}
+
+		.expand-toggle.leaf {
+			visibility: hidden;
+		}
+
+		.expand-toggle:hover {
+			color: #00d9ff;
+		}
+
+		.type-icon {
+			width: 16px;
+			height: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 10px;
+			background-color: #444;
+			border-radius: 3px;
+			flex-shrink: 0;
+		}
+
+		.property-item.selected .type-icon {
+			background-color: #1a1a2e;
+			color: #00d9ff;
+		}
+
+		.name {
+			flex: 1;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.value-preview {
+			color: #888;
+			font-size: 11px;
+			white-space: nowrap;
+			flex-shrink: 0;
+		}
+
+		.property-item.selected .value-preview {
+			color: #1a1a2e;
+		}
+
+		.complex-type-info {
+			color: #888;
+		}
+
+		.complex-type-info p {
+			margin: 8px 0;
+		}
+
+		.complex-type-info .hint {
+			font-size: 12px;
+			color: #666;
+			font-style: italic;
+		}
+
+		/* Key Mapping Editor Styles */
+		.keymapping-editor {
+			border: 1px solid #444;
+			border-radius: 4px;
+			padding: 15px;
+		}
+
+		.keymapping-field {
+			margin-bottom: 15px;
+		}
+
+		.keymapping-field:last-child {
+			margin-bottom: 0;
+		}
+
+		.keymapping-field label {
+			display: block;
+			margin-bottom: 5px;
+			font-size: 12px;
+			color: #888;
+		}
+
+		.key-binding-wrapper {
+			display: flex;
+			gap: 10px;
+		}
+
+		.key-selector {
+			flex: 1;
+			padding: 8px 12px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #1a1a2e;
+			color: #eee;
+			font-size: 14px;
+		}
+
+		.key-selector:focus {
+			outline: none;
+			border-color: #00d9ff;
+		}
+
+		.capture-key-btn {
+			padding: 8px 15px;
+			font-size: 13px;
+			white-space: nowrap;
+		}
+
+		.capture-key-btn:disabled {
+			opacity: 0.7;
+			cursor: wait;
+		}
+
+		.modifier-checks {
+			display: flex;
+			gap: 15px;
+			flex-wrap: wrap;
+		}
+
+		.modifier-label {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			cursor: pointer;
+			font-size: 13px;
+			color: #eee;
+		}
+
+		.modifier-label input[type="checkbox"] {
+			width: 16px;
+			height: 16px;
+			cursor: pointer;
+		}
+
+		.triggers-display {
+			padding: 8px 12px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #1a1a2e;
+			color: #888;
+			font-size: 13px;
+			min-height: 38px;
+		}
+
+		.trigger-item {
+			padding: 3px 0;
+			font-size: 12px;
+			color: #ccc;
+		}
+
+		.trigger-item:not(:last-child) {
+			border-bottom: 1px solid #333;
+		}
+
+		.readonly-input {
+			background-color: #1a1a2e;
+			border-color: #333;
+			color: #888;
+			cursor: not-allowed;
+			width: 100%;
+		}
+
+		.behavior-selector {
+			width: 100%;
+			padding: 8px 12px;
+			border: 1px solid #444;
+			border-radius: 4px;
+			background-color: #1a1a2e;
+			color: #eee;
+			font-size: 14px;
+		}
+
+		.behavior-selector:focus {
+			outline: none;
+			border-color: #00d9ff;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>GVAS Editor <span class="modified-indicator hidden" id="modifiedIndicator"></span></h1>
+
+		<div class="toolbar">
+			<input type="file" id="fileInput" accept=".gvas,.sav">
+			<label for="fileInput" class="file-input-label">Open GVAS File</label>
+			<button class="btn btn-secondary" id="saveBtn" disabled>Save</button>
+			<button class="btn btn-secondary" id="resetBtn" disabled>Reset Changes</button>
+		</div>
+
+		<div class="status-bar">
+			<span id="statusText">No file loaded</span>
+			<span id="fileInfo"></span>
+		</div>
+
+		<div id="headerInfo" class="header-info" style="display: none;">
+			<h3>File Header</h3>
+			<div class="info-grid">
+				<div class="info-item">
+					<span class="info-label">Magic</span>
+					<span class="info-value" id="headerMagic"></span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Save Game Version</span>
+					<span class="info-value" id="headerSaveVersion"></span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Package Version (UE4)</span>
+					<span class="info-value" id="headerPackageVersion"></span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Engine Version</span>
+					<span class="info-value" id="headerEngineVersion"></span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Save Game Class</span>
+					<span class="info-value" id="headerSaveClass"></span>
+				</div>
+			</div>
+		</div>
+
+		<div class="editor-container">
+			<div class="sidebar">
+				<h3>Properties</h3>
+				<ul class="property-tree" id="propertyTree">
+					<!-- Property items will be inserted here -->
+				</ul>
+			</div>
+
+			<div class="main-panel">
+				<div class="empty-state" id="emptyState">
+					<div class="icon">📄</div>
+					<p>Select a property from the sidebar to view and edit its value</p>
+				</div>
+
+				<div class="property-detail" id="propertyDetail">
+					<div class="property-header">
+						<h2 id="detailName"></h2>
+						<div class="meta" id="detailMeta"></div>
+					</div>
+					<div id="detailContent"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+<script type="module">
+		import { parseGvas, serializeGvas } from './index.js';
+		import { convertParsedToUI, deepClone, convertUItoSerialized, getPropertyByPath } from './data-transform.js';
+		import { renderHeaderInfo, renderTree, handleNodeClick, selectProperty, updateTreeItemPreview } from './ui-renderer.js';
+
+		const state = {
+			file: null,
+			fileName: null,
+			treeData: null,
+			originalData: null,
+			selectedPath: null,
+			isModified: false
+		};
+
+		// DOM Elements
+		const fileInput = document.getElementById('fileInput');
+		const saveBtn = document.getElementById('saveBtn');
+		const resetBtn = document.getElementById('resetBtn');
+		const statusText = document.getElementById('statusText');
+		const fileInfo = document.getElementById('fileInfo');
+		const headerInfo = document.getElementById('headerInfo');
+		const propertyTree = document.getElementById('propertyTree');
+		const emptyState = document.getElementById('emptyState');
+		const propertyDetail = document.getElementById('propertyDetail');
+		const detailName = document.getElementById('detailName');
+		const detailMeta = document.getElementById('detailMeta');
+		const detailContent = document.getElementById('detailContent');
+		const modifiedIndicator = document.getElementById('modifiedIndicator');
+
+		// Event Listeners
+		fileInput.addEventListener('change', handleFileSelect);
+		saveBtn.addEventListener('click', handleSave);
+		resetBtn.addEventListener('click', handleReset);
+
+		// File Handling
+		function handleFileSelect(e) {
+			const file = e.target.files[0];
+			if (!file) return;
+
+			state.file = file;
+			state.fileName = file.name;
+
+			statusText.textContent = 'Loaded: ';
+			fileInfo.innerHTML = `<span class="filename">${file.name}</span>`;
+			saveBtn.disabled = false;
+			resetBtn.disabled = false;
+			modifiedIndicator.classList.add('hidden');
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const arrayBuffer = e.target.result;
+				parseGVAS(arrayBuffer);
+			};
+			reader.readAsArrayBuffer(file);
+		}
+
+		// GVAS Parsing
+		function parseGVAS(arrayBuffer) {
+			try {
+				const uint8 = new Uint8Array(arrayBuffer);
+				const parsed = parseGvas(uint8);
+
+				state.treeData = convertParsedToUI(parsed);
+				state.originalData = deepClone(state.treeData);
+
+				renderHeaderInfo(state.treeData, headerInfo);
+				renderTree(state.treeData, propertyTree);
+			} catch (err) {
+				console.error('Failed to parse GVAS file:', err);
+				statusText.textContent = 'Error: ';
+				fileInfo.textContent = err.message;
+			}
+		}
+
+		// Tree item click handler
+		propertyTree.addEventListener('click', (e) => {
+			const item = e.target.closest('.property-item');
+			if (!item) return;
+
+			const path = item.dataset.path;
+			const node = getPropertyByPath(state.treeData, path);
+			if (node) {
+				handleNodeClick(node, propertyTree, (selectedPath) => {
+					state.selectedPath = selectedPath;
+					selectProperty(selectedPath, propertyTree, emptyState, propertyDetail, detailName, detailMeta, detailContent, state.treeData, updateValueAtPath);
+				});
+			}
+		});
+
+		// Update value handler
+		function updateValueAtPath(path, newValue) {
+			const node = getPropertyByPath(state.treeData, path);
+			if (node) {
+				if (typeof newValue === 'function') {
+					newValue(state.treeData);
+				} else {
+					node.value = newValue;
+				}
+				markModified();
+				updateTreeItemPreview(path, state.treeData);
+			}
+		}
+
+		// Mark as Modified
+		function markModified() {
+			if (!state.isModified) {
+				state.isModified = true;
+				modifiedIndicator.classList.remove('hidden');
+			}
+		}
+
+		// Save Handlers
+		function handleSave() {
+			if (!state.file) return;
+			saveFile(state.fileName);
+		}
+
+		function saveFile(fileName) {
+			try {
+				const serializedData = convertUItoSerialized(state.treeData);
+				const uint8 = serializeGvas(serializedData);
+
+				const blob = new Blob([uint8], { type: 'application/octet-stream' });
+				const url = URL.createObjectURL(blob);
+
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = fileName;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+
+				state.isModified = false;
+				modifiedIndicator.classList.add('hidden');
+				statusText.textContent = 'Saved: ';
+			} catch (err) {
+				console.error('Failed to save GVAS file:', err);
+				alert('Failed to save: ' + err.message);
+			}
+		}
+
+		function handleReset() {
+			if (!confirm('Discard all changes?')) return;
+
+			state.treeData = deepClone(state.originalData);
+			state.isModified = false;
+			modifiedIndicator.classList.add('hidden');
+
+			renderTree(state.treeData, propertyTree);
+			if (state.selectedPath !== null) {
+				selectProperty(state.selectedPath, propertyTree, emptyState, propertyDetail, detailName, detailMeta, detailContent, state.treeData, updateValueAtPath);
+			}
+		}
+	</script>
+	</script>
+</body>
+</html>
